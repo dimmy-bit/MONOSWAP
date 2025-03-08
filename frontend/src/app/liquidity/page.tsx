@@ -73,12 +73,12 @@ export default function Liquidity() {
 
         setTokenA(prev => ({
           ...prev,
-          balance: ethers.utils.formatUnits(balanceA, SUPPORTED_TOKENS[prev.symbol].decimals)
+          balance: ethers.utils.formatUnits(balanceA, SUPPORTED_TOKENS[prev.symbol as keyof typeof SUPPORTED_TOKENS].decimals)
         }))
 
         setTokenB(prev => ({
           ...prev,
-          balance: ethers.utils.formatUnits(balanceB, SUPPORTED_TOKENS[prev.symbol].decimals)
+          balance: ethers.utils.formatUnits(balanceB, SUPPORTED_TOKENS[prev.symbol as keyof typeof SUPPORTED_TOKENS].decimals)
         }))
       } catch (error) {
         console.error('Error updating balances:', error)
@@ -115,8 +115,8 @@ export default function Liquidity() {
           // If pair exists, get the reserves and calculate based on current ratio
           const [reserve0, reserve1] = await getReserves(tokenA.symbol, tokenB.symbol)
           if (reserve0.gt(0) && reserve1.gt(0)) {
-            const tokenADecimals = SUPPORTED_TOKENS[tokenA.symbol].decimals
-            const tokenBDecimals = SUPPORTED_TOKENS[tokenB.symbol].decimals
+            const tokenADecimals = SUPPORTED_TOKENS[tokenA.symbol as keyof typeof SUPPORTED_TOKENS].decimals
+            const tokenBDecimals = SUPPORTED_TOKENS[tokenB.symbol as keyof typeof SUPPORTED_TOKENS].decimals
             
             // Convert amount to BigNumber with proper decimals
             const amountABN = ethers.utils.parseUnits(amountA.toString(), tokenADecimals)
@@ -452,4 +452,4 @@ export default function Liquidity() {
       </div>
     </main>
   )
-} 
+}
