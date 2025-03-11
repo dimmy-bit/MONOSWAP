@@ -134,7 +134,7 @@ export default function Liquidity() {
         }
 
         // Format to appropriate number of decimals
-        const decimals = SUPPORTED_TOKENS[tokenB.symbol].decimals
+        const decimals = SUPPORTED_TOKENS[tokenB.symbol as keyof typeof SUPPORTED_TOKENS].decimals
         const formattedAmount = amountB.toFixed(Math.min(decimals, 6))
         
         setTokenB(prev => ({ ...prev, amount: formattedAmount }))
