@@ -12,5 +12,5 @@
       "contracts": false
     }
   },
-  "ignoreCommand": "git diff HEAD^ HEAD ./frontend | wc -l | grep -q '^0$'"
+  "ignoreCommand": "git diff HEAD^ HEAD -- frontend | wc -l | grep -q '^0$'"
 }
