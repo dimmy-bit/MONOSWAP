@@ -12,6 +12,5 @@
       "contracts": false
     }
   },
-  "workingDirectory": "frontend",
   "ignoreCommand": "git diff HEAD^ HEAD ./frontend | wc -l | grep -q '^0$'"
 }
