@@ -12,7 +12,16 @@ export const MONAD_CONFIG = {
   blockExplorerUrls: ['https://explorer.monad.xyz/'],
 }
 
-export const SUPPORTED_TOKENS = {
+type TokenConfig = {
+  name: string;
+  symbol: string;
+  decimals: number;
+  address: string;
+  logo: string;
+  color: string;
+}
+
+export const SUPPORTED_TOKENS: { [key: string]: TokenConfig } = {
   MON: {
     name: 'MON',
     symbol: 'MON',
@@ -45,7 +54,7 @@ export const SUPPORTED_TOKENS = {
     logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
     color: '#26A17B',
   },
-} as const
+}
 
 // Updated Liquidity Pools with correct naming
 export const LIQUIDITY_POOLS = [
@@ -89,4 +98,4 @@ export const STAKING_ADDRESSES = {
 // Default settings
 export const DEFAULT_SLIPPAGE = 0.5 // 0.5%
 export const DEFAULT_DEADLINE = 20 * 60 // 20 minutes
-export const GAS_LIMIT_ADJUSTMENT = 1.2 // 20% adjustment for gas limit 
+export const GAS_LIMIT_ADJUSTMENT = 1.2 // 20% adjustment for gas limit
