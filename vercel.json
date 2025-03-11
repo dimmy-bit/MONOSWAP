@@ -5,6 +5,7 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/.next",
   "installCommand": "cd frontend && npm install",
+  "rootDirectory": "frontend",
   "git": {
     "deploymentEnabled": {
       "frontend": true,
@@ -12,5 +13,5 @@
       "contracts": false
     }
   },
-  "ignoreCommand": "git diff HEAD^ HEAD -- frontend | wc -l | grep -q '^0$'"
+  "ignoreCommand": "git diff HEAD^ HEAD -- frontend/ | grep -q '^$'"
 }
