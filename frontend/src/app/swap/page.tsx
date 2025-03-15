@@ -54,7 +54,7 @@ export default function Swap() {
         setLoading(true)
         setError(null)
         const output = await getAmountOut(fromToken.amount, fromToken.symbol, toToken.symbol)
-        
+
         if (!output) {
           throw new Error('Failed to get quote')
         }
@@ -95,7 +95,7 @@ export default function Swap() {
       })
 
       const tx = await createPair(fromToken.symbol, toToken.symbol)
-      
+
       setTransaction({
         status: 'success',
         message: 'Liquidity pool created successfully! You can now add liquidity.',
@@ -126,7 +126,7 @@ export default function Swap() {
         fromToken.symbol,
         toToken.symbol,
         fromToken.amount,
-        slippage
+        parseFloat(slippage)
       )
 
       setTransaction({
@@ -252,11 +252,10 @@ export default function Swap() {
                       key={option}
                       onClick={() => setSlippage(option)}
                       disabled={loading}
-                      className={`px-3 py-1 rounded-lg text-sm ${
-                        slippage === option
+                      className={`px-3 py-1 rounded-lg text-sm ${slippage === option
                           ? 'bg-primary-500 text-white'
                           : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {option}%
                     </button>
