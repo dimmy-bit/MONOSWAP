@@ -54,8 +54,8 @@ export function useUniswap() {
     if (!router || !amountIn || !tokenIn || !tokenOut) return null
 
     try {
-      const tokenInData = SUPPORTED_TOKENS[tokenIn as keyof typeof SUPPORTED_TOKENS]
-      const tokenOutData = SUPPORTED_TOKENS[tokenOut as keyof typeof SUPPORTED_TOKENS]
+      const tokenInData = SUPPORTED_TOKENS[tokenIn as SupportedTokenSymbol]
+      const tokenOutData = SUPPORTED_TOKENS[tokenOut as SupportedTokenSymbol]
       
       if (!tokenInData || !tokenOutData) return null
 
@@ -78,7 +78,7 @@ export function useUniswap() {
       const poolContract = new ethers.Contract(
         poolAddress,
         ['function getReserves() external view returns (uint112, uint112, uint32)'],
-        provider
+        provider || undefined
       )
 
       // Check if pool has liquidity
@@ -107,8 +107,8 @@ export function useUniswap() {
   ) => {
     if (!router || !address || !provider) throw new Error('Not connected')
 
-    const tokenInData = SUPPORTED_TOKENS[tokenIn as keyof typeof SUPPORTED_TOKENS]
-    const tokenOutData = SUPPORTED_TOKENS[tokenOut as keyof typeof SUPPORTED_TOKENS]
+    const tokenInData = SUPPORTED_TOKENS[tokenIn as SupportedTokenSymbol]
+    const tokenOutData = SUPPORTED_TOKENS[tokenOut as SupportedTokenSymbol]
     
     if (!tokenInData || !tokenOutData) throw new Error('Invalid tokens')
 
@@ -245,8 +245,8 @@ export function useUniswap() {
     const router = new ethers.Contract(UNISWAP_ADDRESSES.ROUTER, UNISWAP_V2_ROUTER_ABI, signer)
 
     // Get token data
-    const tokenAData = SUPPORTED_TOKENS[tokenASymbol as keyof typeof SUPPORTED_TOKENS]
-    const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as keyof typeof SUPPORTED_TOKENS]
+    const tokenAData = SUPPORTED_TOKENS[tokenASymbol as SupportedTokenSymbol]
+    const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as SupportedTokenSymbol]
 
     if (!tokenAData || !tokenBData) {
       throw new Error('Invalid tokens')
@@ -507,8 +507,8 @@ export function useUniswap() {
     if (!factory || !provider) return null
 
     try {
-      const tokenA = SUPPORTED_TOKENS[tokenASymbol as keyof typeof SUPPORTED_TOKENS]
-      const tokenB = SUPPORTED_TOKENS[tokenBSymbol as keyof typeof SUPPORTED_TOKENS]
+      const tokenA = SUPPORTED_TOKENS[tokenASymbol as SupportedTokenSymbol]
+      const tokenB = SUPPORTED_TOKENS[tokenBSymbol as SupportedTokenSymbol]
 
       if (!tokenA || !tokenB) return null
 
@@ -542,4 +542,4 @@ export function useUniswap() {
     createPair,
     getReserves
   }
-} 
+}
