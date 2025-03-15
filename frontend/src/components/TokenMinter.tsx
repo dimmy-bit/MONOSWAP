@@ -29,7 +29,7 @@ export function TokenMinter() {
 
   const checkBalance = useCallback(async (tokenAddress: string, tokenSymbol: string) => {
     if (!provider || !address) return '0'
-    
+
     try {
       const tokenContract = new ethers.Contract(tokenAddress, TEST_TOKEN_ABI, provider)
       const balance = await tokenContract.balanceOf(address)
@@ -53,45 +53,48 @@ export function TokenMinter() {
         status: 'pending',
         message: `Minting test ${token}...`,
       })
-
-      const tokenContract = new ethers.Contract(
-        SUPPORTED_TOKENS[token].address,
-        TEST_TOKEN_ABI,
-        provider.getSigner()
-      )
-
-      // Check if minting is enabled
-      const mintingEnabled = await tokenContract.mintingEnabled()
-      if (!mintingEnabled) {
-        throw new Error('Minting is currently disabled')
+      let tokenContract
+      if (provider) {
+        tokenContract = new ethers.Contract(
+          SUPPORTED_TOKENS[token].address,
+          TEST_TOKEN_ABI,
+          provider.getSigner()
+        )
       }
-
-      // Get current balance
-      const balance = await tokenContract.balanceOf(address)
-      const mintAmount = ethers.utils.parseUnits('500', SUPPORTED_TOKENS[token].decimals)
-      
-      // Check if already has sufficient balance
-      if (balance.gte(mintAmount)) {
-        setError(`You already have sufficient ${token} balance`)
-        setTransaction(null)
-        return
+      if (tokenContract) {
+        // Check if minting is enabled
+        const mintingEnabled = await tokenContract.mintingEnabled()
+        if (!mintingEnabled) {
+          throw new Error('Minting is currently disabled')
+        }
+        
+        // Get current balance
+        const balance = await tokenContract.balanceOf(address)
+        const mintAmount = ethers.utils.parseUnits('500', SUPPORTED_TOKENS[token].decimals)
+        
+        // Check if already has sufficient balance
+        if (balance.gte(mintAmount)) {
+          setError(`You already have sufficient ${token} balance`)
+          setTransaction(null)
+          return
+        }
+        
+        const tx = await tokenContract.mint(address, mintAmount)
+        
+        setTransaction({
+          status: 'pending',
+          message: `Waiting for ${token} mint transaction...`,
+          txHash: tx.hash,
+        })
+        
+        await tx.wait()
+        
+        setTransaction({
+          status: 'success',
+          message: `Successfully minted test ${token}!`,
+          txHash: tx.hash,
+        })
       }
-
-      const tx = await tokenContract.mint(address, mintAmount)
-      
-      setTransaction({
-        status: 'pending',
-        message: `Waiting for ${token} mint transaction...`,
-        txHash: tx.hash,
-      })
-
-      await tx.wait()
-
-      setTransaction({
-        status: 'success',
-        message: `Successfully minted test ${token}!`,
-        txHash: tx.hash,
-      })
 
       // Clear transaction after 5 seconds
       setTimeout(() => {
@@ -124,7 +127,7 @@ export function TokenMinter() {
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
-      
+
       {transaction && (
         <TransactionStatus
           status={transaction.status}
