@@ -12,16 +12,18 @@ export const MONAD_CONFIG = {
   blockExplorerUrls: ['https://explorer.monad.xyz/'],
 }
 
+export type SupportedTokenSymbol = 'MON' | 'WMON' | 'USDC' | 'USDT';
+
 type TokenConfig = {
   name: string;
-  symbol: string;
+  symbol: SupportedTokenSymbol;
   decimals: number;
   address: string;
   logo: string;
   color: string;
 }
 
-export const SUPPORTED_TOKENS: { [key: string]: TokenConfig } = {
+export const SUPPORTED_TOKENS: Record<SupportedTokenSymbol, TokenConfig> = {
   MON: {
     name: 'MON',
     symbol: 'MON',
