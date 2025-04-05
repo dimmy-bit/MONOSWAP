@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { ethers } from 'ethers'
-import { SUPPORTED_TOKENS } from '@/lib/config'
+import { SupportedTokenSymbol, SUPPORTED_TOKENS } from '@/config/tokens'
 
 export async function POST(request: Request) {
   try {

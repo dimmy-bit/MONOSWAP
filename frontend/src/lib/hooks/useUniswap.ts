@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { ethers } from 'ethers'
 import { useWeb3 } from '@/lib/web3/Web3Provider'
-import { SupportedTokenSymbol, SUPPORTED_TOKENS } from '@/config/tokens'
+import { SupportedTokenSymbol, SUPPORTED_TOKENS, TokenConfig } from '@/config/tokens'
 import TokenCache from '../utils/TokenCache'
 import TransactionManager from '../utils/TransactionManager'
 import { 
@@ -51,12 +51,12 @@ export function useUniswap() {
     amountIn: string,
     tokenIn: SupportedTokenSymbol,
     tokenOut: SupportedTokenSymbol
-  ) => {
+  ): Promise<string | null> => {
     if (!router || !amountIn || !tokenIn || !tokenOut) return null
 
     try {
-      const tokenInData = SUPPORTED_TOKENS[tokenIn]
-      const tokenOutData = SUPPORTED_TOKENS[tokenOut]
+      const tokenInData: TokenConfig = SUPPORTED_TOKENS[tokenIn]
+      const tokenOutData: TokenConfig = SUPPORTED_TOKENS[tokenOut]
       
       if (!tokenInData || !tokenOutData) return null
 

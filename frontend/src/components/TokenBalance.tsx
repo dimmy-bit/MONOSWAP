@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ethers } from 'ethers'
 import { useWeb3 } from '@/lib/web3/Web3Provider'
-import { SUPPORTED_TOKENS } from '@/lib/config'
+import { SupportedTokenSymbol, SUPPORTED_TOKENS } from '@/config/tokens'
 import { LoadingSpinner } from './LoadingSpinner'
 
 const ERC20_ABI = [

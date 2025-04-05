@@ -1,6 +1,6 @@
 export type SupportedTokenSymbol = 'MON' | 'WMON' | 'USDC' | 'USDT'
 
-interface TokenConfig {
+export interface TokenConfig {
   name: string
   symbol: SupportedTokenSymbol
   decimals: number

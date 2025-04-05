@@ -10,7 +10,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { TransactionStatus } from '@/components/TransactionStatus'
 import { useWeb3 } from '@/lib/web3/Web3Provider'
 import { useUniswap } from '@/lib/hooks/useUniswap'
-import { SUPPORTED_TOKENS } from '@/lib/config'
+import { SupportedTokenSymbol, SUPPORTED_TOKENS } from '@/config/tokens'
 
 interface SwapQuote {
   estimatedOutput: string
@@ -25,35 +25,41 @@ interface TransactionState {
   txHash?: string
 }
 
+interface SwapState {
+  tokenIn: SupportedTokenSymbol
+  tokenOut: SupportedTokenSymbol
+  amountIn: string
+  amountOut: string
+  loading: boolean
+  error: string | null
+}
+
 export default function Swap() {
   const { address, signer } = useWeb3()
   const { getAmountOut, swap, createPair } = useUniswap()
-  const [fromToken, setFromToken] = useState({
-    symbol: 'MON',
-    amount: '',
-  })
-  const [toToken, setToToken] = useState({
-    symbol: 'USDC',
-    amount: '',
+  const [state, setState] = useState<SwapState>({
+    tokenIn: 'MON',
+    tokenOut: 'USDC',
+    amountIn: '',
+    amountOut: '',
+    loading: false,
+    error: null
   })
   const [slippage, setSlippage] = useState('0.5')
   const [quote, setQuote] = useState<SwapQuote | null>(null)
-  const [loading, setLoading] = useState(false)
   const [transaction, setTransaction] = useState<TransactionState | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const updateQuote = async () => {
-      if (!fromToken.amount || parseFloat(fromToken.amount) === 0) {
+      if (!state.amountIn || parseFloat(state.amountIn) === 0) {
         setQuote(null)
-        setError(null)
+        setState(prev => ({ ...prev, error: null }))
         return
       }
 
       try {
-        setLoading(true)
-        setError(null)
-        const output = await getAmountOut(fromToken.amount, fromToken.symbol, toToken.symbol)
+        setState(prev => ({ ...prev, loading: true, error: null }))
+        const output = await getAmountOut(state.amountIn, state.tokenIn, state.tokenOut)
 
         if (!output) {
           throw new Error('Failed to get quote')
@@ -63,24 +69,24 @@ export default function Swap() {
           estimatedOutput: output,
           priceImpact: '0.1',
           minimumReceived: (parseFloat(output) * (1 - parseFloat(slippage) / 100)).toString(),
-          fee: (parseFloat(fromToken.amount) * 0.003).toString(),
+          fee: (parseFloat(state.amountIn) * 0.003).toString(),
         })
-        setToToken(prev => ({ ...prev, amount: output }))
+        setState(prev => ({ ...prev, amountOut: output }))
       } catch (error) {
         console.error('Error updating quote:', error)
         if (error instanceof Error) {
-          setError(error.message)
+          setState(prev => ({ ...prev, error: error.message }))
         } else {
-          setError('Failed to get quote')
+          setState(prev => ({ ...prev, error: 'Failed to get quote' }))
         }
         setQuote(null)
       } finally {
-        setLoading(false)
+        setState(prev => ({ ...prev, loading: false }))
       }
     }
 
     updateQuote()
-  }, [fromToken.amount, fromToken.symbol, toToken.symbol, slippage, getAmountOut])
+  }, [state.amountIn, state.tokenIn, state.tokenOut, slippage, getAmountOut])
 
   const handleCreatePool = async () => {
     if (!address || !signer) {
@@ -94,7 +100,7 @@ export default function Swap() {
         message: 'Creating liquidity pool...',
       })
 
-      const tx = await createPair(fromToken.symbol, toToken.symbol)
+      const tx = await createPair(state.tokenIn, state.tokenOut)
 
       setTransaction({
         status: 'success',
@@ -123,9 +129,9 @@ export default function Swap() {
       })
 
       const tx = await swap(
-        fromToken.symbol,
-        toToken.symbol,
-        fromToken.amount,
+        state.tokenIn,
+        state.tokenOut,
+        state.amountIn,
         parseFloat(slippage)
       )
 
@@ -135,8 +141,7 @@ export default function Swap() {
         txHash: tx.hash,
       })
 
-      setFromToken(prev => ({ ...prev, amount: '' }))
-      setToToken(prev => ({ ...prev, amount: '' }))
+      setState(prev => ({ ...prev, amountIn: '', amountOut: '' }))
     } catch (error) {
       console.error('Error executing swap:', error)
       setTransaction({
@@ -147,9 +152,14 @@ export default function Swap() {
   }
 
   const switchTokens = () => {
-    if (loading) return // Prevent switching during loading
-    setFromToken(toToken)
-    setToToken(fromToken)
+    if (state.loading) return // Prevent switching during loading
+    setState(prev => ({
+      ...prev,
+      tokenIn: prev.tokenOut,
+      tokenOut: prev.tokenIn,
+      amountIn: prev.amountOut,
+      amountOut: prev.amountIn
+    }))
   }
 
   const slippageOptions = ['0.5', '1', '2', '3']
@@ -179,22 +189,22 @@ export default function Swap() {
             <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-4 mb-2">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-500">From</span>
-                <TokenBalance symbol={fromToken.symbol} />
+                <TokenBalance symbol={state.tokenIn} />
               </div>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  value={fromToken.amount}
-                  onChange={(e) => setFromToken(prev => ({ ...prev, amount: e.target.value }))}
+                  value={state.amountIn}
+                  onChange={(e) => setState(prev => ({ ...prev, amountIn: e.target.value }))}
                   placeholder="0.0"
-                  disabled={loading}
+                  disabled={state.loading}
                   className="w-full bg-transparent text-2xl outline-none text-gray-900 dark:text-white disabled:opacity-50"
                 />
                 <TokenSelector
-                  selectedToken={fromToken.symbol}
-                  onSelect={(symbol) => setFromToken(prev => ({ ...prev, symbol }))}
-                  excludeToken={toToken.symbol}
-                  disabled={loading}
+                  selectedToken={state.tokenIn}
+                  onSelect={(symbol) => setState(prev => ({ ...prev, tokenIn: symbol }))}
+                  excludeToken={state.tokenOut}
+                  disabled={state.loading}
                 />
               </div>
             </div>
@@ -203,7 +213,7 @@ export default function Swap() {
             <div className="flex justify-center -my-4 relative z-10">
               <button
                 onClick={switchTokens}
-                disabled={loading}
+                disabled={state.loading}
                 className="bg-white dark:bg-gray-800 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ArrowDownIcon className="h-6 w-6 text-gray-500" />
@@ -214,11 +224,11 @@ export default function Swap() {
             <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-4 mt-2">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-500">To</span>
-                <TokenBalance symbol={toToken.symbol} />
+                <TokenBalance symbol={state.tokenOut} />
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-full bg-transparent text-2xl text-gray-900 dark:text-white">
-                  {loading ? (
+                  {state.loading ? (
                     <div className="flex items-center gap-2">
                       <LoadingSpinner size="sm" />
                       <span className="text-gray-500">Calculating...</span>
@@ -226,7 +236,7 @@ export default function Swap() {
                   ) : (
                     <input
                       type="number"
-                      value={toToken.amount}
+                      value={state.amountOut}
                       readOnly
                       placeholder="0.0"
                       className="w-full bg-transparent outline-none"
@@ -234,10 +244,10 @@ export default function Swap() {
                   )}
                 </div>
                 <TokenSelector
-                  selectedToken={toToken.symbol}
-                  onSelect={(symbol) => setToToken(prev => ({ ...prev, symbol }))}
-                  excludeToken={fromToken.symbol}
-                  disabled={loading}
+                  selectedToken={state.tokenOut}
+                  onSelect={(symbol) => setState(prev => ({ ...prev, tokenOut: symbol }))}
+                  excludeToken={state.tokenIn}
+                  disabled={state.loading}
                 />
               </div>
             </div>
@@ -251,7 +261,7 @@ export default function Swap() {
                     <button
                       key={option}
                       onClick={() => setSlippage(option)}
-                      disabled={loading}
+                      disabled={state.loading}
                       className={`px-3 py-1 rounded-lg text-sm ${slippage === option
                           ? 'bg-primary-500 text-white'
                           : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
@@ -273,19 +283,19 @@ export default function Swap() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Minimum Received</span>
-                  <span className="text-gray-900 dark:text-white">{quote.minimumReceived} {toToken.symbol}</span>
+                  <span className="text-gray-900 dark:text-white">{quote.minimumReceived} {state.tokenOut}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Liquidity Provider Fee</span>
-                  <span className="text-gray-900 dark:text-white">{quote.fee} {fromToken.symbol}</span>
+                  <span className="text-gray-900 dark:text-white">{quote.fee} {state.tokenIn}</span>
                 </div>
               </div>
             )}
 
-            {error && (
+            {state.error && (
               <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-red-500">{error}</p>
-                {error.includes('pool does not exist') && (
+                <p className="text-red-500">{state.error}</p>
+                {state.error.includes('pool does not exist') && (
                   <button
                     onClick={handleCreatePool}
                     className="mt-2 w-full btn-primary bg-red-500 hover:bg-red-600"
@@ -298,7 +308,7 @@ export default function Swap() {
 
             <button
               onClick={handleSwap}
-              disabled={!address || loading || !quote || transaction?.status === 'pending' || !!error}
+              disabled={!address || state.loading || !quote || transaction?.status === 'pending' || !!state.error}
               className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed mt-4"
             >
               {transaction?.status === 'pending' ? (
@@ -306,11 +316,11 @@ export default function Swap() {
                   <LoadingSpinner size="sm" />
                   <span>Processing...</span>
                 </div>
-              ) : loading ? (
+              ) : state.loading ? (
                 'Loading...'
               ) : !address ? (
                 'Connect Wallet to Swap'
-              ) : error ? (
+              ) : state.error ? (
                 'Cannot Swap'
               ) : (
                 'Swap'

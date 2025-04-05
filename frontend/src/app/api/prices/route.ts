@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { SUPPORTED_TOKENS } from '@/lib/config'
+import { SupportedTokenSymbol, SUPPORTED_TOKENS } from '@/config/tokens'
 
 // In a real implementation, this would fetch from a price oracle or aggregator
 const MOCK_PRICES = {
