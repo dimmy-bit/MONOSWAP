@@ -242,7 +242,11 @@ export function useUniswap() {
       throw new Error('Provider or account not connected')
     }
 
-    const signer = provider.getSigner?.() || provider
+    const signer = provider.getSigner()
+    if (!signer) {
+      throw new Error('Signer not available')
+    }
+
     const router = new ethers.Contract(UNISWAP_ADDRESSES.ROUTER, UNISWAP_V2_ROUTER_ABI, signer)
 
     // Get token data
@@ -315,6 +319,14 @@ export function useUniswap() {
           gasLimit: options?.gasLimit || 500000
         }
 
+        console.log('Adding liquidity with ETH:', {
+          token,
+          tokenAmount: tokenAmount.toString(),
+          tokenAmountMin: tokenAmountMin.toString(),
+          monAmountMin: monAmountMin.toString(),
+          deadline
+        })
+
         return await router.addLiquidityETH(
           token,
           tokenAmount,
@@ -370,6 +382,16 @@ export function useUniswap() {
           }
         }
 
+        console.log('Adding liquidity:', {
+          tokenA: tokenAData.address,
+          tokenB: tokenBData.address,
+          amountADesired: amountADesired.toString(),
+          amountBDesired: amountBDesired.toString(),
+          amountAMin: amountAMin.toString(),
+          amountBMin: amountBMin.toString(),
+          deadline
+        })
+
         return await router.addLiquidity(
           tokenAData.address,
           tokenBData.address,
@@ -392,6 +414,10 @@ export function useUniswap() {
         throw new Error('Insufficient token A amount. Please adjust the ratio.')
       } else if (error.message?.includes('INSUFFICIENT_LIQUIDITY_MINTED')) {
         throw new Error('Amount too small to add liquidity. Please increase the amounts.')
+      } else if (error.message?.includes('execution reverted')) {
+        // Log the full error for debugging
+        console.error('Full error:', error)
+        throw new Error('Transaction failed. Please check token amounts and try again.')
       }
       throw error
     }

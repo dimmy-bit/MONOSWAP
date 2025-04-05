@@ -237,9 +237,7 @@ export default function Liquidity() {
         message: 'Checking balances and approvals...'
       })
 
-      // Validate balances with more specific error messages
-      const tokenABalance = parseFloat(tokenA.balance || '0')
-      const tokenBBalance = parseFloat(tokenB.balance || '0')
+      // Validate amounts
       const tokenAAmount = parseFloat(tokenA.amount)
       const tokenBAmount = parseFloat(tokenB.amount)
 
@@ -251,24 +249,47 @@ export default function Liquidity() {
         throw new Error('Amounts must be greater than 0')
       }
 
-      // Check if token A is native MON
+      // Check balances
       if (tokenA.symbol === 'MON') {
-        const monBalance = await provider?.getBalance(address)
-        if (monBalance && ethers.utils.parseEther(tokenA.amount).gt(monBalance)) {
+        if (!provider) throw new Error('Provider not available')
+        const monBalance = await provider.getBalance(address)
+        const requiredAmount = ethers.utils.parseEther(tokenA.amount)
+        if (monBalance.lt(requiredAmount)) {
           throw new Error(`Insufficient MON balance. You have ${ethers.utils.formatEther(monBalance)} MON but trying to add ${tokenA.amount}`)
         }
-      } else if (tokenAAmount > tokenABalance) {
-        throw new Error(`Insufficient ${tokenA.symbol} balance. You have ${tokenABalance} but trying to add ${tokenAAmount}`)
+      } else {
+        if (!provider) throw new Error('Provider not available')
+        const tokenAContract = new ethers.Contract(
+          tokenA.address,
+          ['function balanceOf(address) view returns (uint256)'],
+          provider
+        )
+        const balanceA = await tokenAContract.balanceOf(address)
+        const requiredAmountA = ethers.utils.parseUnits(tokenA.amount, SUPPORTED_TOKENS[tokenA.symbol].decimals)
+        if (balanceA.lt(requiredAmountA)) {
+          throw new Error(`Insufficient ${tokenA.symbol} balance`)
+        }
       }
 
-      // Check if token B is native MON
       if (tokenB.symbol === 'MON') {
-        const monBalance = await provider?.getBalance(address)
-        if (monBalance && ethers.utils.parseEther(tokenB.amount).gt(monBalance)) {
+        if (!provider) throw new Error('Provider not available')
+        const monBalance = await provider.getBalance(address)
+        const requiredAmount = ethers.utils.parseEther(tokenB.amount)
+        if (monBalance.lt(requiredAmount)) {
           throw new Error(`Insufficient MON balance. You have ${ethers.utils.formatEther(monBalance)} MON but trying to add ${tokenB.amount}`)
         }
-      } else if (tokenBAmount > tokenBBalance) {
-        throw new Error(`Insufficient ${tokenB.symbol} balance. You have ${tokenBBalance} but trying to add ${tokenBAmount}`)
+      } else {
+        if (!provider) throw new Error('Provider not available')
+        const tokenBContract = new ethers.Contract(
+          tokenB.address,
+          ['function balanceOf(address) view returns (uint256)'],
+          provider
+        )
+        const balanceB = await tokenBContract.balanceOf(address)
+        const requiredAmountB = ethers.utils.parseUnits(tokenB.amount, SUPPORTED_TOKENS[tokenB.symbol].decimals)
+        if (balanceB.lt(requiredAmountB)) {
+          throw new Error(`Insufficient ${tokenB.symbol} balance`)
+        }
       }
 
       // Check if pool exists
@@ -282,21 +303,35 @@ export default function Liquidity() {
           message: 'Creating new liquidity pool...'
         })
 
-        const createTx = await createPair(tokenA.symbol, tokenB.symbol)
-        await createTx.wait()
+        try {
+          const createTx = await createPair(tokenA.symbol, tokenB.symbol)
+          setTransaction({
+            status: 'pending',
+            message: 'Waiting for pool creation...',
+            txHash: createTx.hash
+          })
+          await createTx.wait()
 
-        setTransaction({
-          status: 'pending',
-          message: 'Pool created, adding initial liquidity...'
-        })
-      } else {
-        setTransaction({
-          status: 'pending',
-          message: 'Adding liquidity to existing pool...'
-        })
+          setTransaction({
+            status: 'pending',
+            message: 'Pool created, adding initial liquidity...'
+          })
+        } catch (error: any) {
+          if (error.message?.includes('pair exists')) {
+            // Pool was created in another transaction, continue with adding liquidity
+            console.log('Pool already exists, continuing with liquidity addition')
+          } else {
+            throw error
+          }
+        }
       }
 
       // Add liquidity with higher gas limit for safety
+      setTransaction({
+        status: 'pending',
+        message: 'Adding liquidity...'
+      })
+
       const tx = await addLiquidity(
         tokenA.symbol,
         tokenB.symbol,
@@ -304,7 +339,7 @@ export default function Liquidity() {
         tokenB.amount,
         slippage,
         {
-          gasLimit: 750000 // Increased gas limit for safety
+          gasLimit: 1000000 // Increased gas limit further for safety
         }
       )
 
@@ -349,6 +384,8 @@ export default function Liquidity() {
         errorMessage = error.message
       } else if (error.message?.includes('Failed to approve token')) {
         errorMessage = 'Failed to approve token. Please try again.'
+      } else if (error.message?.includes('execution reverted')) {
+        errorMessage = 'Transaction failed. Please try again with different amounts.'
       }
 
       setError(errorMessage)
