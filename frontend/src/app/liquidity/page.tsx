@@ -146,19 +146,39 @@ export default function Liquidity() {
 
   // Helper function to calculate initial ratios
   const calculateInitialRatio = (amountA: number, tokenASymbol: string, tokenBSymbol: string): number => {
+    const tokenADecimals = SUPPORTED_TOKENS[tokenASymbol as SupportedTokenSymbol].decimals
+    const tokenBDecimals = SUPPORTED_TOKENS[tokenBSymbol as SupportedTokenSymbol].decimals
+
+    // Convert amount to a decimal-adjusted value
+    const adjustedAmountA = amountA * Math.pow(10, tokenADecimals)
+
+    let ratio: number
     if (tokenASymbol === 'MON') {
       if (tokenBSymbol === 'USDC' || tokenBSymbol === 'USDT') {
-        return amountA * 5000 // 1 MON = 5000 USDC/USDT
+        ratio = 5000 // 1 MON = 5000 USDC/USDT
+      } else {
+        ratio = 1 // Default 1:1 ratio
       }
     } else if (tokenBSymbol === 'MON') {
       if (tokenASymbol === 'USDC' || tokenASymbol === 'USDT') {
-        return amountA / 5000 // 5000 USDC/USDT = 1 MON
+        ratio = 1 / 5000 // 5000 USDC/USDT = 1 MON
+      } else {
+        ratio = 1 // Default 1:1 ratio
       }
     } else if ((tokenASymbol === 'USDC' && tokenBSymbol === 'USDT') ||
                (tokenASymbol === 'USDT' && tokenBSymbol === 'USDC')) {
-      return amountA // 1:1 ratio for stablecoins
+      ratio = 1 // 1:1 ratio for stablecoins
+    } else {
+      ratio = 1 // Default 1:1 ratio
     }
-    return amountA // Default 1:1 ratio
+
+    // Adjust the ratio based on token decimals
+    const decimalAdjustment = Math.pow(10, tokenBDecimals - tokenADecimals)
+    const result = (adjustedAmountA * ratio * decimalAdjustment) / Math.pow(10, tokenADecimals)
+
+    // Round to appropriate number of decimals
+    const significantDecimals = Math.min(tokenBDecimals, 6)
+    return parseFloat(result.toFixed(significantDecimals))
   }
 
   const handleCreatePool = async () => {
@@ -218,16 +238,36 @@ export default function Liquidity() {
       })
 
       // Validate balances with more specific error messages
-      const tokenABalance = parseFloat(tokenA.balance)
-      const tokenBBalance = parseFloat(tokenB.balance)
+      const tokenABalance = parseFloat(tokenA.balance || '0')
+      const tokenBBalance = parseFloat(tokenB.balance || '0')
       const tokenAAmount = parseFloat(tokenA.amount)
       const tokenBAmount = parseFloat(tokenB.amount)
 
-      if (tokenAAmount > tokenABalance) {
+      if (isNaN(tokenAAmount) || isNaN(tokenBAmount)) {
+        throw new Error('Invalid amount entered')
+      }
+
+      if (tokenAAmount <= 0 || tokenBAmount <= 0) {
+        throw new Error('Amounts must be greater than 0')
+      }
+
+      // Check if token A is native MON
+      if (tokenA.symbol === 'MON') {
+        const monBalance = await provider?.getBalance(address)
+        if (monBalance && ethers.utils.parseEther(tokenA.amount).gt(monBalance)) {
+          throw new Error(`Insufficient MON balance. You have ${ethers.utils.formatEther(monBalance)} MON but trying to add ${tokenA.amount}`)
+        }
+      } else if (tokenAAmount > tokenABalance) {
         throw new Error(`Insufficient ${tokenA.symbol} balance. You have ${tokenABalance} but trying to add ${tokenAAmount}`)
       }
 
-      if (tokenBAmount > tokenBBalance) {
+      // Check if token B is native MON
+      if (tokenB.symbol === 'MON') {
+        const monBalance = await provider?.getBalance(address)
+        if (monBalance && ethers.utils.parseEther(tokenB.amount).gt(monBalance)) {
+          throw new Error(`Insufficient MON balance. You have ${ethers.utils.formatEther(monBalance)} MON but trying to add ${tokenB.amount}`)
+        }
+      } else if (tokenBAmount > tokenBBalance) {
         throw new Error(`Insufficient ${tokenB.symbol} balance. You have ${tokenBBalance} but trying to add ${tokenBAmount}`)
       }
 
@@ -291,6 +331,10 @@ export default function Liquidity() {
 
       if (error.message?.includes('INSUFFICIENT_B_AMOUNT')) {
         errorMessage = 'The ratio of tokens is incorrect. Please adjust the amounts to match the current pool ratio.'
+      } else if (error.message?.includes('INSUFFICIENT_A_AMOUNT')) {
+        errorMessage = 'The ratio of tokens is incorrect. Please adjust the amounts to match the current pool ratio.'
+      } else if (error.message?.includes('INSUFFICIENT_LIQUIDITY_MINTED')) {
+        errorMessage = 'Amount too small to add liquidity. Please increase the amounts.'
       } else if (error.message?.includes('insufficient balance')) {
         errorMessage = error.message
       } else if (error.message?.includes('user rejected')) {
@@ -301,6 +345,10 @@ export default function Liquidity() {
         errorMessage = 'Transaction requires more gas. Please try increasing the gas limit.'
       } else if (error.message?.includes('nonce')) {
         errorMessage = 'Transaction nonce error. Please try refreshing the page.'
+      } else if (error.message?.includes('Token approval rejected')) {
+        errorMessage = error.message
+      } else if (error.message?.includes('Failed to approve token')) {
+        errorMessage = 'Failed to approve token. Please try again.'
       }
 
       setError(errorMessage)

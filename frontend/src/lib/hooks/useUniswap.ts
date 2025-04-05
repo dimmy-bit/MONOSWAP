@@ -270,6 +270,16 @@ export function useUniswap() {
     const isTokenBNative = tokenBData.address === '0x0000000000000000000000000000000000000000'
 
     try {
+      // Check native token balance if needed
+      if (isTokenANative || isTokenBNative) {
+        const nativeBalance = await provider.getBalance(address)
+        const nativeAmount = isTokenANative ? amountADesired : amountBDesired
+        
+        if (nativeBalance.lt(nativeAmount)) {
+          throw new Error(`Insufficient MON balance. You need ${ethers.utils.formatEther(nativeAmount)} MON`)
+        }
+      }
+
       if (isTokenANative || isTokenBNative) {
         // Handle native token (MON) + ERC20 token case
         const token = isTokenANative ? tokenBData.address : tokenAData.address
@@ -284,12 +294,19 @@ export function useUniswap() {
         
         if (allowance.lt(tokenAmount)) {
           console.log('Approving token for router...')
-          const approveTx = await tokenContract.approve(
-            UNISWAP_ADDRESSES.ROUTER,
-            ethers.constants.MaxUint256
-          )
-          await approveTx.wait()
-          console.log('Token approved')
+          try {
+            const approveTx = await tokenContract.approve(
+              UNISWAP_ADDRESSES.ROUTER,
+              ethers.constants.MaxUint256
+            )
+            await approveTx.wait()
+            console.log('Token approved')
+          } catch (error: any) {
+            if (error.message?.includes('user rejected')) {
+              throw new Error('Token approval rejected by user')
+            }
+            throw new Error('Failed to approve token')
+          }
         }
 
         // Add liquidity with MON
@@ -318,24 +335,39 @@ export function useUniswap() {
           tokenBContract.allowance(address, UNISWAP_ADDRESSES.ROUTER)
         ])
 
-        const approvalPromises = []
+        // Handle approvals sequentially to avoid nonce issues
         if (allowanceA.lt(amountADesired)) {
           console.log('Approving token A for router...')
-          approvalPromises.push(
-            tokenAContract.approve(UNISWAP_ADDRESSES.ROUTER, ethers.constants.MaxUint256)
-          )
-        }
-        if (allowanceB.lt(amountBDesired)) {
-          console.log('Approving token B for router...')
-          approvalPromises.push(
-            tokenBContract.approve(UNISWAP_ADDRESSES.ROUTER, ethers.constants.MaxUint256)
-          )
+          try {
+            const approveTx = await tokenAContract.approve(
+              UNISWAP_ADDRESSES.ROUTER,
+              ethers.constants.MaxUint256
+            )
+            await approveTx.wait()
+            console.log('Token A approved')
+          } catch (error: any) {
+            if (error.message?.includes('user rejected')) {
+              throw new Error('Token A approval rejected by user')
+            }
+            throw new Error('Failed to approve token A')
+          }
         }
 
-        if (approvalPromises.length > 0) {
-          const approvalTxs = await Promise.all(approvalPromises)
-          await Promise.all(approvalTxs.map(tx => tx.wait()))
-          console.log('Tokens approved')
+        if (allowanceB.lt(amountBDesired)) {
+          console.log('Approving token B for router...')
+          try {
+            const approveTx = await tokenBContract.approve(
+              UNISWAP_ADDRESSES.ROUTER,
+              ethers.constants.MaxUint256
+            )
+            await approveTx.wait()
+            console.log('Token B approved')
+          } catch (error: any) {
+            if (error.message?.includes('user rejected')) {
+              throw new Error('Token B approval rejected by user')
+            }
+            throw new Error('Failed to approve token B')
+          }
         }
 
         return await router.addLiquidity(
@@ -354,8 +386,12 @@ export function useUniswap() {
       }
     } catch (error: any) {
       console.error('Error in addLiquidity:', error)
-      if (error.message.includes('INSUFFICIENT_B_AMOUNT')) {
+      if (error.message?.includes('INSUFFICIENT_B_AMOUNT')) {
         throw new Error('Insufficient token B amount. Please adjust the ratio.')
+      } else if (error.message?.includes('INSUFFICIENT_A_AMOUNT')) {
+        throw new Error('Insufficient token A amount. Please adjust the ratio.')
+      } else if (error.message?.includes('INSUFFICIENT_LIQUIDITY_MINTED')) {
+        throw new Error('Amount too small to add liquidity. Please increase the amounts.')
       }
       throw error
     }
