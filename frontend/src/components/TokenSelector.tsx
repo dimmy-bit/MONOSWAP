@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { ChevronDownIcon } from '@heroicons/react/24/solid'
-import { SUPPORTED_TOKENS } from '@/lib/config'
+import { SUPPORTED_TOKENS, SupportedTokenSymbol } from '@/config/tokens'
 
 interface TokenSelectorProps {
-  selectedToken: string
-  onSelect: (token: string) => void
-  excludeToken?: string
+  selectedToken: SupportedTokenSymbol
+  onSelect: (token: SupportedTokenSymbol) => void
+  excludeToken?: SupportedTokenSymbol
   disabled?: boolean
   className?: string
 }
@@ -24,7 +24,7 @@ export function TokenSelector({
   const [imageError, setImageError] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const handleSelect = (token: string) => {
+  const handleSelect = (token: SupportedTokenSymbol) => {
     if (disabled) return
     onSelect(token)
     setIsOpen(false)
@@ -46,8 +46,8 @@ export function TokenSelector({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const TokenImage = ({ symbol }: { symbol: string }) => {
-    const token = SUPPORTED_TOKENS[symbol as keyof typeof SUPPORTED_TOKENS]
+  const TokenImage = ({ symbol }: { symbol: SupportedTokenSymbol }) => {
+    const token = SUPPORTED_TOKENS[symbol]
     if (!token?.logo || imageError) {
       return (
         <div 
@@ -98,7 +98,7 @@ export function TokenSelector({
               .map(([symbol, token]) => (
                 <button
                   key={symbol}
-                  onClick={() => handleSelect(symbol)}
+                  onClick={() => handleSelect(symbol as SupportedTokenSymbol)}
                   className={`
                     flex items-center gap-3 w-full px-4 py-3 rounded-lg
                     ${symbol === selectedToken 
@@ -108,7 +108,7 @@ export function TokenSelector({
                     transition-colors duration-200
                   `}
                 >
-                  <TokenImage symbol={symbol} />
+                  <TokenImage symbol={symbol as SupportedTokenSymbol} />
                   <div className="flex flex-col items-start">
                     <span className="font-medium text-gray-900 dark:text-white">{symbol}</span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">{token.name}</span>

@@ -11,9 +11,9 @@ import { TransactionProgress } from '@/components/TransactionProgress'
 import { TransactionStatus } from '@/components/TransactionStatus'
 import { useWeb3 } from '@/lib/web3/Web3Provider'
 import { useUniswap } from '@/lib/hooks/useUniswap'
-import { SUPPORTED_TOKENS } from '@/lib/config'
-import TokenCache from '@/lib/utils/TokenCache'
-import TransactionManager from '@/lib/utils/TransactionManager'
+import { SUPPORTED_TOKENS, SupportedTokenSymbol } from '@/config/tokens'
+import { useAccount } from '@/lib/hooks/useAccount'
+import { useTokens, TokenState } from '@/lib/hooks/useTokens'
 
 interface TransactionState {
   status: 'pending' | 'success' | 'error'
@@ -24,20 +24,8 @@ interface TransactionState {
 export default function Liquidity() {
   const { provider, address, signer } = useWeb3()
   const { addLiquidity, getPair, createPair, getReserves } = useUniswap()
-
-  const [tokenA, setTokenA] = useState({
-    symbol: 'MON',
-    amount: '',
-    balance: '0',
-    address: '0x0000000000000000000000000000000000000000'
-  })
-
-  const [tokenB, setTokenB] = useState({
-    symbol: 'USDC',
-    amount: '',
-    balance: '0',
-    address: SUPPORTED_TOKENS.USDC.address
-  })
+  const { account } = useAccount()
+  const { tokenA, tokenB, setTokenA, setTokenB } = useTokens()
 
   const [slippage, setSlippage] = useState('0.5')
   const [loading, setLoading] = useState(false)
@@ -46,22 +34,17 @@ export default function Liquidity() {
 
   // Effect to update token balances directly from blockchain
   useEffect(() => {
-    if (!address || !provider) return
+    if (!account || !provider) return
 
     const updateBalances = async () => {
       try {
         // Get Token A balance
-        let balanceA: ethers.BigNumber
-        if (tokenA.address === '0x0000000000000000000000000000000000000000') {
-          balanceA = await provider.getBalance(address)
-        } else {
-          const contractA = new ethers.Contract(
-            tokenA.address,
-            ['function balanceOf(address) view returns (uint256)'],
-            provider
-          )
-          balanceA = await contractA.balanceOf(address)
-        }
+        const contractA = new ethers.Contract(
+          tokenA.address,
+          ['function balanceOf(address) view returns (uint256)'],
+          provider
+        )
+        const balanceA = await contractA.balanceOf(account)
 
         // Get Token B balance
         const contractB = new ethers.Contract(
@@ -69,17 +52,29 @@ export default function Liquidity() {
           ['function balanceOf(address) view returns (uint256)'],
           provider
         )
-        const balanceB = await contractB.balanceOf(address)
+        const balanceB = await contractB.balanceOf(account)
 
-        setTokenA(prev => ({
-          ...prev,
-          balance: ethers.utils.formatUnits(balanceA, SUPPORTED_TOKENS[prev.symbol as keyof typeof SUPPORTED_TOKENS].decimals)
-        }))
+        setTokenA((prev: TokenState): TokenState => {
+          return {
+            ...prev,
+            symbol: prev.symbol, // Preserve the symbol type
+            balance: ethers.utils.formatUnits(
+              balanceA,
+              SUPPORTED_TOKENS[prev.symbol].decimals
+            )
+          }
+        })
 
-        setTokenB(prev => ({
-          ...prev,
-          balance: ethers.utils.formatUnits(balanceB, SUPPORTED_TOKENS[prev.symbol as keyof typeof SUPPORTED_TOKENS].decimals)
-        }))
+        setTokenB((prev: TokenState): TokenState => {
+          return {
+            ...prev,
+            symbol: prev.symbol, // Preserve the symbol type
+            balance: ethers.utils.formatUnits(
+              balanceB,
+              SUPPORTED_TOKENS[prev.symbol].decimals
+            )
+          }
+        })
       } catch (error) {
         console.error('Error updating balances:', error)
       }
@@ -89,7 +84,7 @@ export default function Liquidity() {
     const interval = setInterval(updateBalances, 10000) // Update every 10 seconds
 
     return () => clearInterval(interval)
-  }, [address, provider, tokenA.address, tokenB.address])
+  }, [account, provider, tokenA.address, tokenB.address, setTokenA, setTokenB])
 
   // Effect to auto-calculate Token B amount based on Token A
   useEffect(() => {
@@ -115,8 +110,8 @@ export default function Liquidity() {
           // If pair exists, get the reserves and calculate based on current ratio
           const [reserve0, reserve1] = await getReserves(tokenA.symbol, tokenB.symbol)
           if (reserve0.gt(0) && reserve1.gt(0)) {
-            const tokenADecimals = SUPPORTED_TOKENS[tokenA.symbol as keyof typeof SUPPORTED_TOKENS].decimals
-            const tokenBDecimals = SUPPORTED_TOKENS[tokenB.symbol as keyof typeof SUPPORTED_TOKENS].decimals
+            const tokenADecimals = SUPPORTED_TOKENS[tokenA.symbol as SupportedTokenSymbol].decimals
+            const tokenBDecimals = SUPPORTED_TOKENS[tokenB.symbol as SupportedTokenSymbol].decimals
             
             // Convert amount to BigNumber with proper decimals
             const amountABN = ethers.utils.parseUnits(amountA.toString(), tokenADecimals)
@@ -134,7 +129,7 @@ export default function Liquidity() {
         }
 
         // Format to appropriate number of decimals
-        const decimals:any = SUPPORTED_TOKENS[tokenB.symbol as keyof typeof SUPPORTED_TOKENS].decimals
+        const decimals:any = SUPPORTED_TOKENS[tokenB.symbol as SupportedTokenSymbol].decimals
         const formattedAmount = amountB.toFixed(Math.min(decimals, 6))
         
         setTokenB(prev => ({ ...prev, amount: formattedAmount }))
@@ -368,7 +363,15 @@ export default function Liquidity() {
                   />
                   <TokenSelector
                     selectedToken={tokenA.symbol}
-                    onSelect={(symbol) => setTokenA(prev => ({ ...prev, symbol }))}
+                    onSelect={(symbol) => 
+                      setTokenA(prev => ({ 
+                        ...prev, 
+                        symbol,
+                        address: symbol === 'MON' 
+                          ? '0x0000000000000000000000000000000000000000'
+                          : SUPPORTED_TOKENS[symbol].address
+                      }))
+                    }
                     excludeToken={tokenB.symbol}
                   />
                 </div>
@@ -390,7 +393,15 @@ export default function Liquidity() {
                   />
                   <TokenSelector
                     selectedToken={tokenB.symbol}
-                    onSelect={(symbol) => setTokenB(prev => ({ ...prev, symbol }))}
+                    onSelect={(symbol) => 
+                      setTokenB(prev => ({ 
+                        ...prev, 
+                        symbol,
+                        address: symbol === 'MON' 
+                          ? '0x0000000000000000000000000000000000000000'
+                          : SUPPORTED_TOKENS[symbol].address
+                      }))
+                    }
                     excludeToken={tokenA.symbol}
                   />
                 </div>
