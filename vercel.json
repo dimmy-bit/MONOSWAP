@@ -2,14 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/.next",
+  "installCommand": "cd frontend && npm install",
   "git": {
     "deploymentEnabled": {
       "frontend": true,
       "backend": false,
       "contracts": false
     }
+  },
+  "env": {
+    "NEXT_PUBLIC_MONAD_RPC_URL": "https://testnet-rpc.monad.xyz/",
+    "NEXT_PUBLIC_CHAIN_ID": "10143"
   }
 }

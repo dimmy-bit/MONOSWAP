@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { ethers } from 'ethers'
 import { useWeb3 } from '@/lib/web3/Web3Provider'
+import { SupportedTokenSymbol } from '@/lib/config'
 import TokenCache from '../utils/TokenCache'
 import TransactionManager from '../utils/TransactionManager'
 import { 
@@ -34,28 +35,28 @@ export function useUniswap() {
     )
   }, [provider])
 
-  const getTokenContract = useCallback((tokenAddress: string) => {
+  const getTokenContract = useCallback((tokenAddress: string): ethers.Contract | null => {
     if (!provider) return null
     return new ethers.Contract(tokenAddress, ERC20_ABI, provider)
   }, [provider])
 
-  const getPairContract = async (tokenA: string, tokenB: string) => {
-    if (!factory) return null
+  const getPairContract = async (tokenA: string, tokenB: string): Promise<ethers.Contract | null> => {
+    if (!factory || !provider) return null
     const pairAddress = await factory.getPair(tokenA, tokenB)
     if (pairAddress === ethers.constants.AddressZero) return null
-    return new ethers.Contract(pairAddress, UNISWAP_V2_PAIR_ABI, provider?.getSigner())
+    return new ethers.Contract(pairAddress, UNISWAP_V2_PAIR_ABI, provider.getSigner?.() || provider)
   }
 
   const getAmountOut = useCallback(async (
     amountIn: string,
-    tokenIn: string,
-    tokenOut: string
+    tokenIn: SupportedTokenSymbol,
+    tokenOut: SupportedTokenSymbol
   ) => {
     if (!router || !amountIn || !tokenIn || !tokenOut) return null
 
     try {
-      const tokenInData = SUPPORTED_TOKENS[tokenIn as SupportedTokenSymbol]
-      const tokenOutData = SUPPORTED_TOKENS[tokenOut as SupportedTokenSymbol]
+      const tokenInData = SUPPORTED_TOKENS[tokenIn as keyof typeof SUPPORTED_TOKENS]
+      const tokenOutData = SUPPORTED_TOKENS[tokenOut as keyof typeof SUPPORTED_TOKENS]
       
       if (!tokenInData || !tokenOutData) return null
 
@@ -100,15 +101,15 @@ export function useUniswap() {
   }, [router, factory, provider])
 
   const swap = useCallback(async (
-    tokenIn: string,
-    tokenOut: string,
+    tokenIn: SupportedTokenSymbol,
+    tokenOut: SupportedTokenSymbol,
     amountIn: string,
     slippage: number = 0.5
   ) => {
     if (!router || !address || !provider) throw new Error('Not connected')
 
-    const tokenInData = SUPPORTED_TOKENS[tokenIn as SupportedTokenSymbol]
-    const tokenOutData = SUPPORTED_TOKENS[tokenOut as SupportedTokenSymbol]
+    const tokenInData = SUPPORTED_TOKENS[tokenIn as keyof typeof SUPPORTED_TOKENS]
+    const tokenOutData = SUPPORTED_TOKENS[tokenOut as keyof typeof SUPPORTED_TOKENS]
     
     if (!tokenInData || !tokenOutData) throw new Error('Invalid tokens')
 
@@ -128,7 +129,7 @@ export function useUniswap() {
 
     // If tokenIn is native MONAD
     if (tokenInData.address === '0x0000000000000000000000000000000000000000') {
-      const tx = await router.connect(provider.getSigner()).swapExactETHForTokens(
+      const tx = await router.connect(provider.getSigner?.() || provider).swapExactETHForTokens(
         amountOutMin,
         path,
         address,
@@ -145,14 +146,14 @@ export function useUniswap() {
 
       const allowance = await token.allowance(address, UNISWAP_ADDRESSES.ROUTER)
       if (allowance.lt(amountInWei)) {
-        const approveTx = await token.connect(provider.getSigner()).approve(
+        const approveTx = await token.connect(provider.getSigner?.() || provider).approve(
           UNISWAP_ADDRESSES.ROUTER,
           ethers.constants.MaxUint256
         )
         await approveTx.wait()
       }
 
-      const tx = await router.connect(provider.getSigner()).swapExactTokensForETH(
+      const tx = await router.connect(provider.getSigner?.() || provider).swapExactTokensForETH(
         amountInWei,
         amountOutMin,
         path,
@@ -168,14 +169,14 @@ export function useUniswap() {
 
     const allowance = await token.allowance(address, UNISWAP_ADDRESSES.ROUTER)
     if (allowance.lt(amountInWei)) {
-      const approveTx = await token.connect(provider.getSigner()).approve(
+      const approveTx = await token.connect(provider.getSigner?.() || provider).approve(
         UNISWAP_ADDRESSES.ROUTER,
         ethers.constants.MaxUint256
       )
       await approveTx.wait()
     }
 
-    const tx = await router.connect(provider.getSigner()).swapExactTokensForTokens(
+    const tx = await router.connect(provider.getSigner?.() || provider).swapExactTokensForTokens(
       amountInWei,
       amountOutMin,
       path,
@@ -185,7 +186,7 @@ export function useUniswap() {
     return tx
   }, [router, address, provider, getTokenContract])
 
-  const getReserves = useCallback(async (tokenASymbol: string, tokenBSymbol: string) => {
+  const getReserves = useCallback(async (tokenASymbol: SupportedTokenSymbol, tokenBSymbol: SupportedTokenSymbol) => {
     if (!factory || !provider) return [ethers.BigNumber.from(0), ethers.BigNumber.from(0)]
 
     try {
@@ -230,8 +231,8 @@ export function useUniswap() {
   }, [factory, provider])
 
   const addLiquidity = useCallback(async (
-    tokenASymbol: string,
-    tokenBSymbol: string,
+    tokenASymbol: SupportedTokenSymbol,
+    tokenBSymbol: SupportedTokenSymbol,
     amountA: string,
     amountB: string,
     slippage: string,
@@ -241,12 +242,12 @@ export function useUniswap() {
       throw new Error('Provider or account not connected')
     }
 
-    const signer = provider.getSigner()
+    const signer = provider.getSigner?.() || provider
     const router = new ethers.Contract(UNISWAP_ADDRESSES.ROUTER, UNISWAP_V2_ROUTER_ABI, signer)
 
     // Get token data
-    const tokenAData = SUPPORTED_TOKENS[tokenASymbol as SupportedTokenSymbol]
-    const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as SupportedTokenSymbol]
+    const tokenAData = SUPPORTED_TOKENS[tokenASymbol as keyof typeof SUPPORTED_TOKENS]
+    const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as keyof typeof SUPPORTED_TOKENS]
 
     if (!tokenAData || !tokenBData) {
       throw new Error('Invalid tokens')
@@ -370,8 +371,8 @@ export function useUniswap() {
 
     // Get pair contract
     const pair = await getPairContract(
-      SUPPORTED_TOKENS[tokenA].address,
-      SUPPORTED_TOKENS[tokenB].address
+      SUPPORTED_TOKENS[tokenA as SupportedTokenSymbol].address,
+      SUPPORTED_TOKENS[tokenB as SupportedTokenSymbol].address
     )
     if (!pair) throw new Error('Pair not found')
 
@@ -396,8 +397,8 @@ export function useUniswap() {
     // Remove liquidity
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20 // 20 minutes
     const tx = await router.removeLiquidity(
-      SUPPORTED_TOKENS[tokenA].address,
-      SUPPORTED_TOKENS[tokenB].address,
+      SUPPORTED_TOKENS[tokenA as SupportedTokenSymbol].address,
+      SUPPORTED_TOKENS[tokenB as SupportedTokenSymbol].address,
       liquidityAmount,
       amountAMin,
       amountBMin,
@@ -495,7 +496,7 @@ export function useUniswap() {
       : tokenB.address
 
     try {
-      const tx = await factory.connect(provider.getSigner()).createPair(tokenAAddress, tokenBAddress)
+      const tx = await factory.connect(provider.getSigner?.() || provider).createPair(tokenAAddress, tokenBAddress)
       return tx
     } catch (error) {
       console.error('Error creating pair:', error)

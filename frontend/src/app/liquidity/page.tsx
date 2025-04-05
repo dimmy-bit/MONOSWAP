@@ -222,18 +222,18 @@ export default function Liquidity() {
         message: 'Checking balances and approvals...'
       })
 
-      // Validate balances
+      // Validate balances with more specific error messages
       const tokenABalance = parseFloat(tokenA.balance)
       const tokenBBalance = parseFloat(tokenB.balance)
       const tokenAAmount = parseFloat(tokenA.amount)
       const tokenBAmount = parseFloat(tokenB.amount)
 
       if (tokenAAmount > tokenABalance) {
-        throw new Error(`Insufficient ${tokenA.symbol} balance`)
+        throw new Error(`Insufficient ${tokenA.symbol} balance. You have ${tokenABalance} but trying to add ${tokenAAmount}`)
       }
 
       if (tokenBAmount > tokenBBalance) {
-        throw new Error(`Insufficient ${tokenB.symbol} balance`)
+        throw new Error(`Insufficient ${tokenB.symbol} balance. You have ${tokenBBalance} but trying to add ${tokenBAmount}`)
       }
 
       // Check if pool exists
@@ -244,7 +244,7 @@ export default function Liquidity() {
       if (isInitialLiquidity) {
         setTransaction({
           status: 'pending',
-          message: 'Creating liquidity pool...'
+          message: 'Creating new liquidity pool...'
         })
 
         const createTx = await createPair(tokenA.symbol, tokenB.symbol)
@@ -269,7 +269,7 @@ export default function Liquidity() {
         tokenB.amount,
         slippage,
         {
-          gasLimit: 500000
+          gasLimit: 750000 // Increased gas limit for safety
         }
       )
 
@@ -295,13 +295,17 @@ export default function Liquidity() {
       let errorMessage = 'Failed to add liquidity'
 
       if (error.message?.includes('INSUFFICIENT_B_AMOUNT')) {
-        errorMessage = 'The ratio of tokens is incorrect. Please adjust the amounts.'
+        errorMessage = 'The ratio of tokens is incorrect. Please adjust the amounts to match the current pool ratio.'
       } else if (error.message?.includes('insufficient balance')) {
         errorMessage = error.message
       } else if (error.message?.includes('user rejected')) {
         errorMessage = 'Transaction rejected by user'
       } else if (error.message?.includes('insufficient funds')) {
         errorMessage = 'Insufficient MON for gas fees'
+      } else if (error.message?.includes('gas required exceeds')) {
+        errorMessage = 'Transaction requires more gas. Please try increasing the gas limit.'
+      } else if (error.message?.includes('nonce')) {
+        errorMessage = 'Transaction nonce error. Please try refreshing the page.'
       }
 
       setError(errorMessage)
