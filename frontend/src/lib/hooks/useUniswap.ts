@@ -479,11 +479,14 @@ export function useUniswap() {
     }
   }
 
-  const createPair = useCallback(async (tokenASymbol: string, tokenBSymbol: string) => {
+  const createPair = useCallback(async (
+    tokenASymbol: SupportedTokenSymbol,
+    tokenBSymbol: SupportedTokenSymbol
+  ) => {
     if (!factory || !provider) throw new Error('Provider not connected')
 
-    const tokenA = SUPPORTED_TOKENS[tokenASymbol as keyof typeof SUPPORTED_TOKENS]
-    const tokenB = SUPPORTED_TOKENS[tokenBSymbol as keyof typeof SUPPORTED_TOKENS]
+    const tokenA = SUPPORTED_TOKENS[tokenASymbol]
+    const tokenB = SUPPORTED_TOKENS[tokenBSymbol]
 
     if (!tokenA || !tokenB) throw new Error('Invalid tokens')
 
@@ -504,12 +507,15 @@ export function useUniswap() {
     }
   }, [factory, provider])
 
-  const getPair = useCallback(async (tokenASymbol: string, tokenBSymbol: string) => {
+  const getPair = useCallback(async (
+    tokenASymbol: SupportedTokenSymbol,
+    tokenBSymbol: SupportedTokenSymbol
+  ) => {
     if (!factory || !provider) return null
 
     try {
-      const tokenA = SUPPORTED_TOKENS[tokenASymbol as SupportedTokenSymbol]
-      const tokenB = SUPPORTED_TOKENS[tokenBSymbol as SupportedTokenSymbol]
+      const tokenA = SUPPORTED_TOKENS[tokenASymbol]
+      const tokenB = SUPPORTED_TOKENS[tokenBSymbol]
 
       if (!tokenA || !tokenB) return null
 
