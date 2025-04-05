@@ -12,7 +12,8 @@ export const MONAD_CONFIG = {
   blockExplorerUrls: ['https://explorer.monad.xyz/'],
 }
 
-export type SupportedTokenSymbol = 'MON' | 'WMON' | 'USDC' | 'USDT';
+export const SUPPORTED_TOKEN_SYMBOLS = ['MON', 'WMON', 'USDC', 'USDT'] as const;
+export type SupportedTokenSymbol = typeof SUPPORTED_TOKEN_SYMBOLS[number];
 
 interface TokenConfig {
   name: string;
@@ -23,10 +24,10 @@ interface TokenConfig {
   color: string;
 }
 
-export const SUPPORTED_TOKENS: { [K in SupportedTokenSymbol]: TokenConfig } = {
+export const SUPPORTED_TOKENS = {
   MON: {
     name: 'MON',
-    symbol: 'MON',
+    symbol: 'MON' as const,
     decimals: 18,
     address: '0x0000000000000000000000000000000000000000', // Native token
     logo: '/tokens/mon.svg',
@@ -34,7 +35,7 @@ export const SUPPORTED_TOKENS: { [K in SupportedTokenSymbol]: TokenConfig } = {
   },
   WMON: {
     name: 'Wrapped MON',
-    symbol: 'WMON',
+    symbol: 'WMON' as const,
     decimals: 18,
     address: '0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701',
     logo: '/tokens/wmon.svg',
@@ -43,20 +44,20 @@ export const SUPPORTED_TOKENS: { [K in SupportedTokenSymbol]: TokenConfig } = {
   USDC: {
     name: 'USD Coin',
     decimals: 6,
-    symbol: 'USDC',
+    symbol: 'USDC' as const,
     address: '0x0b34a08730f7dcf1130629Ca2ed5Bc9c8f5Aa435',
     logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
     color: '#2775CA',
   },
   USDT: {
     name: 'Tether USD',
-    symbol: 'USDT',
+    symbol: 'USDT' as const,
     decimals: 6,
     address: '0x69d8FdC9E0bFe943a9987402DF71feF7f7E468F5',
     logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
     color: '#26A17B',
   },
-} as const;
+} as const satisfies Record<SupportedTokenSymbol, TokenConfig>;
 
 // Updated Liquidity Pools with correct naming
 export const LIQUIDITY_POOLS = [
