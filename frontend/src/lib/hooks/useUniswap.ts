@@ -55,8 +55,8 @@ export function useUniswap() {
     if (!router || !amountIn || !tokenIn || !tokenOut) return null
 
     try {
-      const tokenInData = SUPPORTED_TOKENS[tokenIn as keyof typeof SUPPORTED_TOKENS]
-      const tokenOutData = SUPPORTED_TOKENS[tokenOut as keyof typeof SUPPORTED_TOKENS]
+      const tokenInData = SUPPORTED_TOKENS[tokenIn as 'MON' | 'WMON' | 'USDC' | 'USDT']
+      const tokenOutData = SUPPORTED_TOKENS[tokenOut as 'MON' | 'WMON' | 'USDC' | 'USDT']
       
       if (!tokenInData || !tokenOutData) return null
 
@@ -108,8 +108,8 @@ export function useUniswap() {
   ) => {
     if (!router || !address || !provider) throw new Error('Not connected')
 
-    const tokenInData = SUPPORTED_TOKENS[tokenIn as keyof typeof SUPPORTED_TOKENS]
-    const tokenOutData = SUPPORTED_TOKENS[tokenOut as keyof typeof SUPPORTED_TOKENS]
+    const tokenInData = SUPPORTED_TOKENS[tokenIn as 'MON' | 'WMON' | 'USDC' | 'USDT']
+    const tokenOutData = SUPPORTED_TOKENS[tokenOut as 'MON' | 'WMON' | 'USDC' | 'USDT']
     
     if (!tokenInData || !tokenOutData) throw new Error('Invalid tokens')
 
@@ -190,8 +190,8 @@ export function useUniswap() {
     if (!factory || !provider) return [ethers.BigNumber.from(0), ethers.BigNumber.from(0)]
 
     try {
-      const tokenAData = SUPPORTED_TOKENS[tokenASymbol as keyof typeof SUPPORTED_TOKENS]
-      const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as keyof typeof SUPPORTED_TOKENS]
+      const tokenAData = SUPPORTED_TOKENS[tokenASymbol as 'MON' | 'WMON' | 'USDC' | 'USDT']
+      const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as 'MON' | 'WMON' | 'USDC' | 'USDT']
 
       if (!tokenAData || !tokenBData) {
         throw new Error('Invalid tokens')
@@ -246,8 +246,8 @@ export function useUniswap() {
     const router = new ethers.Contract(UNISWAP_ADDRESSES.ROUTER, UNISWAP_V2_ROUTER_ABI, signer)
 
     // Get token data
-    const tokenAData = SUPPORTED_TOKENS[tokenASymbol as keyof typeof SUPPORTED_TOKENS]
-    const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as keyof typeof SUPPORTED_TOKENS]
+    const tokenAData = SUPPORTED_TOKENS[tokenASymbol as 'MON' | 'WMON' | 'USDC' | 'USDT']
+    const tokenBData = SUPPORTED_TOKENS[tokenBSymbol as 'MON' | 'WMON' | 'USDC' | 'USDT']
 
     if (!tokenAData || !tokenBData) {
       throw new Error('Invalid tokens')

@@ -14,7 +14,7 @@ export const MONAD_CONFIG = {
 
 export type SupportedTokenSymbol = 'MON' | 'WMON' | 'USDC' | 'USDT';
 
-type TokenConfig = {
+interface TokenConfig {
   name: string;
   symbol: SupportedTokenSymbol;
   decimals: number;
@@ -23,7 +23,7 @@ type TokenConfig = {
   color: string;
 }
 
-export const SUPPORTED_TOKENS: Record<SupportedTokenSymbol, TokenConfig> = {
+export const SUPPORTED_TOKENS: { [K in SupportedTokenSymbol]: TokenConfig } = {
   MON: {
     name: 'MON',
     symbol: 'MON',
@@ -56,7 +56,7 @@ export const SUPPORTED_TOKENS: Record<SupportedTokenSymbol, TokenConfig> = {
     logo: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
     color: '#26A17B',
   },
-}
+} as const;
 
 // Updated Liquidity Pools with correct naming
 export const LIQUIDITY_POOLS = [
