@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { ethers } from 'ethers'
 import { useWeb3 } from '@/lib/web3/Web3Provider'
-import { SupportedTokenSymbol } from '@/lib/config'
+import { SupportedTokenSymbol, SUPPORTED_TOKENS } from '@/config/tokens'
 import TokenCache from '../utils/TokenCache'
 import TransactionManager from '../utils/TransactionManager'
 import { 
@@ -10,7 +10,7 @@ import {
   UNISWAP_V2_FACTORY_ABI,
   UNISWAP_V2_PAIR_ABI
 } from '@/lib/contracts/abis'
-import { SUPPORTED_TOKENS, UNISWAP_ADDRESSES, DEFAULT_DEADLINE } from '@/lib/config'
+import { UNISWAP_ADDRESSES, DEFAULT_DEADLINE } from '@/lib/config'
 
 export function useUniswap() {
   const { address, provider } = useWeb3()
